@@ -1,25 +1,71 @@
-# PhantomDLL Injector
+# 👻 PhantomDLL-Injector
+<p align="center">
+  <img alt="Tamanho do repositório" src="https://img.shields.io/github/repo-size/panda12332145/PhantomDLL-Injector">
+  <a href="https://github.com/panda12332145/PhantomDLL-Injector/commits/main"><img alt="Último commit" src="https://img.shields.io/github/last-commit/panda12332145/PhantomDLL-Injector"></a>
+  <a href="https://github.com/panda12332145/PhantomDLL-Injector"><img alt="Stars" src="https://img.shields.io/github/stars/panda12332145/PhantomDLL-Injector?style=social"></a>
+  <img alt="Linguagem" src="https://img.shields.io/badge/language-Python-blue">
+</p>
+---
+## ⚠️ Aviso Legal / Uso Educacional
 
-Ferramenta simples em Python pra monitorar processos no Windows e injetar DLL automaticamente quando uma nova instancia aparece. Vem com um payload de exemplo em C que abre a calculadora, so pra testar o fluxo de injecao.
+> Projeto de **estudo de engenharia reversa e defesa do Windows** — técnicas de injeção de DLL explicadas para **laboratórios próprios e autorizados** (malware analysis, hardening de EDR). Usar contra sistemas sem permissão é **crime** (Lei 12.737/2012). Os payloads incluídos (`ghost_calc_payload_*`) apenas abrem a calculadora, sem carga maliciosa.
 
-Nao e framework, nao e servico, e um script CLI direto ao ponto.
+---
+## 🔖 Resumo
 
-## Funcionalidades
+Ferramenta em Python para **estudo de injeção de DLL** no Windows, explorando a API clássica `OpenProcess → VirtualAllocEx → WriteProcessMemory → CreateRemoteThread` — com modos smart (watch & inject), payloads-DLL de exemplo inofensivos (calculadora) e documentação de arquitetura, segurança e limitações.
 
-- monitora processos pelo nome usando psutil
-- ignora processos que ja existiam antes de iniciar, injeta so em instancias novas
-- injeta DLL via WinAPI: OpenProcess, VirtualAllocEx, WriteProcessMemory, CreateRemoteThread com LoadLibraryA
-- CLI com argparse: nome do processo, caminho da DLL e intervalo de verificacao
-- payload de exemplo em C com DllMain que cria thread separada e executa calc.exe
-- binarios de exemplo 32 e 64 bits compilados a partir do C
+### ✨ Funcionalidades Principais
 
-## Tecnologias
+- ✅ Injeção via `inject_and_execute` (fluxo clássico de 4 passos)
+- ✅ Modo `watch_and_inject_smart` — detecta processo-alvo e injeta
+- ✅ DLLs payload x86/x64 de exemplo (abrem a calculadora)
+- ✅ Uso via CLI (`main.py`) ou como módulo Python
+- ✅ Documentação extra: ARCHITECTURE.md, SECURITY.md, usage_examples.md
 
-- Python 3 com ctypes e psutil
-- C com Windows API (windows.h)
-- WinAPI kernel32: OpenProcess, VirtualAllocEx, WriteProcessMemory, GetModuleHandleA, GetProcAddress, CreateRemoteThread, WaitForSingleObject, CloseHandle
+## 📽 Demonstração
 
-## Arquitetura
+```text
+$ python main.py -h
+# injeção direta por PID, monitoramento smart, dlls ghost_calc
+
+$ python main.py --watch explorer.exe
+[+] Alvo detectado, injetando ghost_calc_payload_x64.dll...
+[+] Calculadora aberta no processo alvo (sucesso didático)
+```
+
+## ⚙️ Explicação das Partes Importantes
+
+### `inject_and_execute` — fluxo de injeção
+
+```python
+# 1. OpenProcess          → abre handle no processo alvo
+# 2. VirtualAllocEx       → aloca memória no processo remoto
+# 3. WriteProcessMemory   → escreve o caminho da DLL
+# 4. CreateRemoteThread   → carrega a DLL (LoadLibrary)
+```
+
+> O clássico 'DLL injection' de 4 passos — cada etapa comentada no código e explicada em ARCHITECTURE.md.
+
+### `watch_and_inject_smart`
+
+```python
+# monitora a criação de processos e dispara a injeção
+# assim que o processo-alvo aparece
+```
+
+> Modo proativo: vigia e injeta automaticamente — útil para demonstrar detecção (EDR observa CreateRemoteThread).
+
+### Payloads (`ghost_calc_payload_*.dll`)
+
+```c
+// ghost_calc_loader.c — DLL mínima que apenas
+// chama ShellExecute na calculadora ao ser carregada
+```
+
+> Payloads propositadamente inofensivos: provam o controle sem fazer nada malicioso.
+
+###Arquitetura
 
 ```mermaid
 graph TD
@@ -37,53 +83,9 @@ graph TD
 
 Fluxo real: entrada (processo + dll + intervalo) -> processamento (psutil + ctypes) -> dependencias (kernel32.dll do Windows) -> saida (log no console e DLL injetada).
 
-## Estrutura do projeto
+---
 
-```
-PhantomDLL-Injector/
-|-- main.py
-|-- requirements.txt
-|-- .gitignore
-|-- bin/
-|   |-- ghost_calc_payload_x86.dll
-|   |-- ghost_calc_payload_x64.dll
-|   `-- README.md
-|-- src/
-|   |-- phantom_dll_injector/
-|   |   |-- __init__.py
-|   |   |-- win_api.py
-|   |   |-- injector_core.py
-|   |   |-- process_watcher.py
-|   |   `-- cli.py
-|   `-- payload/
-|       |-- ghost_calc_loader.c
-|       `-- build_instructions.md
-|-- docs/
-|   |-- ARCHITECTURE.md
-|   `-- SECURITY.md
-|-- examples/
-|   `-- usage_examples.md
-`-- tests/
-    `-- test_imports.py
-```
-
-## Instalacao
-
-So funciona no Windows, por causa do kernel32.
-
-```bash
-git clone https://github.com/panda12332145/PhantomDLL-Injector.git
-cd PhantomDLL-Injector
-pip install -r requirements.txt
-```
-
-Dependencia unica: psutil. ctypes ja vem no Python.
-
-Se quiser recompilar a DLL de exemplo, precisa de gcc (MinGW) ou Visual Studio no Windows. Veja `src/payload/build_instructions.md`.
-
-## Execucao
-
-### via main.py
+####via main.py
 
 ```bash
 python main.py notepad.exe C:\caminho\absoluto\para\bin\ghost_calc_payload_x64.dll --interval 3
@@ -99,7 +101,9 @@ O script lista processos existentes e diz que nao vai injetar neles. Depois fica
 
 Pra parar, Ctrl+C.
 
-### como modulo
+---
+
+####como modulo
 
 ```python
 from src.phantom_dll_injector import watch_and_inject_smart
@@ -107,7 +111,9 @@ from src.phantom_dll_injector import watch_and_inject_smart
 watch_and_inject_smart("notepad.exe", "C:\\full\\path\\ghost_calc_payload_x64.dll", 3)
 ```
 
-### injecao direta por PID
+---
+
+####injecao direta por PID
 
 ```python
 from src.phantom_dll_injector import inject_and_execute
@@ -115,9 +121,13 @@ from src.phantom_dll_injector import inject_and_execute
 inject_and_execute(1234, "C:\\full\\path\\ghost_calc_payload_x64.dll")
 ```
 
-## Explicacao das partes importantes
+---
 
-### `inject_and_execute`
+###Explicacao das partes importantes
+
+---
+
+####`inject_and_execute`
 
 ```python
 def inject_and_execute(pid: int, dll_path: str) -> bool:
@@ -130,7 +140,9 @@ def inject_and_execute(pid: int, dll_path: str) -> bool:
 
 Abre o processo, aloca memoria la dentro, escreve o caminho da DLL, pega endereco do LoadLibraryA e cria thread remota pra carregar. Espera 3s e retorna True se deu certo.
 
-### `watch_and_inject_smart`
+---
+
+####`watch_and_inject_smart`
 
 ```python
 def watch_and_inject_smart(process_name: str, dll_path: str, check_interval: int = 5):
@@ -141,7 +153,9 @@ def watch_and_inject_smart(process_name: str, dll_path: str, check_interval: int
 
 Evita injetar duas vezes no mesmo processo e limpa PIDs que morreram.
 
-### `ghost_calc_loader.c`
+---
+
+####`ghost_calc_loader.c`
 
 ```c
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
@@ -152,18 +166,9 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 DllMain nao executa payload direto, cria thread separada. Isso evita deadlock no loader lock. Payload so da WinExec calc.exe, exemplo simples.
 
-## Testes
+---
 
-Nao tem suite completa, so validacao estatica.
-
-```bash
-python -m py_compile src/phantom_dll_injector/*.py main.py
-python tests/test_imports.py
-```
-
-No Windows, teste real seria abrir notepad e injetar a DLL de teste.
-
-## Consideracoes de seguranca
+###Consideracoes de seguranca
 
 - abre processo com PROCESS_ALL_ACCESS, permissao maxima. Melhor seria usar so as flags necessarias: CREATE_THREAD, VM_OPERATION, VM_WRITE, QUERY_INFORMATION
 - nao valida se arquivo DLL existe antes de injetar, nem checa assinatura. Se o caminho vier de input externo, pode injetar coisa errada
@@ -176,37 +181,128 @@ No Windows, teste real seria abrir notepad e injetar a DLL de teste.
 
 Veja `docs/SECURITY.md` pra analise mais detalhada.
 
-## Limitacoes
+## 🔄 Fluxo de Trabalho / Arquitetura
 
-- so Windows
-- arquitetura da DLL tem que bater com a do processo alvo, 32 bits nao injeta em 64 bits e vice versa
-- precisa privilegio de debug ou admin dependendo do alvo
-- nao funciona em processos protegidos (PPL, anticheat)
-- sem log em arquivo, so console
-- sem validacao de integridade da DLL
+```mermaid
+graph TD
+    A[main.py - CLI/modulo] --> B[inject_and_execute]
+    A --> C[watch_and_inject_smart]
+    B --> D[OpenProcess]
+    D --> E[VirtualAllocEx]
+    E --> F[WriteProcessMemory]
+    F --> G[CreateRemoteThread - LoadLibrary]
+    G --> H[ghost_calc_payload - calculadora]
+    C --> D
+```
 
-## Roadmap
+## 📂 Estrutura do Projeto
 
-Implementado:
+```plaintext
+PhantomDLL-Injector/
+├── main.py                    # CLI de entrada
+├── ghost_calc_payload_x64.dll # Payload didático 64-bit
+├── ghost_calc_payload_x86.dll # Payload didático 32-bit
+├── test_imports.py            # Smoke test
+├── ARCHITECTURE.md            # Arquitetura detalhada
+├── SECURITY.md                # Notas de segurança
+├── usage_examples.md          # Exemplos de uso
+├── requirements.txt
+└── README.md
+```
 
-- monitor de novas instancias
-- injecao via CreateRemoteThread + LoadLibraryA
-- payload de exemplo em C
-- CLI simples
+## 🛠️ Tecnologias
 
-Planejado (nao implementado, so ideias):
+| Ferramenta | Uso |
+|---|---|
+| **Python 3** | Orquestração (ctypes/WinAPI) |
+| **Win32 API** | OpenProcess, VirtualAllocEx, WriteProcessMemory, CreateRemoteThread |
+| **C (MinGW)** | Compilação das DLLs payload |
+| **Windows** | Alvo da ferramenta |
 
-- validacao de existencia e arquitetura da DLL antes de injetar
-- usar permissoes minimas em vez de PROCESS_ALL_ACCESS
-- opcao de log em arquivo
-- suporte a injecao via NtCreateThreadEx ou outras tecnicas pra teste
-- remover binarios do repo e gerar em CI
-- testes automatizados no Windows
+## ▶️ Instalação
 
-## Licenca
+```bash
+git clone https://github.com/panda12332145/PhantomDLL-Injector.git
+cd PhantomDLL-Injector
+pip install -r requirements.txt
+# Windows apenas
+```
 
-Repositorio original nao tinha arquivo LICENSE. Sem licenca definida, considera uso privado. Se for publicar, adicione uma licenca.
+## 🚀 Execução
 
-## Autor
+```bash
+python main.py --help
+# via CLI, como módulo, ou injeção direta por PID
+# (ver usage_examples.md)
+python test_imports.py
+```
 
-Repositorio original em github.com/panda12332145/PhantomDLL-Injector. Refatoracao estrutural feita pra organizar modulos, renomear arquivos e documentar.
+## 🧪 Testes
+
+`python test_imports.py` — smoke test de importações e dependências.
+
+## ⚠️ Limitações
+
+- Windows apenas (WinAPI)
+- Exige privilégios suficientes no processo-alvo
+- Defensores (EDR) detectam o padrão clássico — é exatamente o ponto do estudo
+
+## 🚀 Roadmap
+
+- [ ] Modo sem thread remota (alternative techniques)
+- [ ] Compilação reproduzível das DLLs
+- [ ] Detecções correspondentes (blue team)
+
+## 📄 Licença
+
+Todos os direitos reservados ao autor.
+
+---
+
+## 👾 Autor
+
+<p align="center">
+  <img style="border-radius: 50%;" src="https://avatars.githubusercontent.com/u/73090399?v=4" width="100px" alt="Avatar"/>
+</p>
+
+<p align="center">Feito por <strong>Panda12332145</strong> 👋🏽</p>
+
+---
+
+## 🧑‍💻 Sobre Mim
+
+Sou apaixonado por **Física Teórica, Cibersegurança e Desenvolvimento de Sistemas**. Tenho grande interesse em programação de baixo nível, engenharia reversa, automação, sistemas Windows, criptografia e segurança ofensiva. Também gosto bastante de música, filosofia e computação avançada.
+
+---
+
+## 🌐 Redes
+
+* **Site:** [https://panda-h0me.netlify.app/](https://panda-h0me.netlify.app/)
+* **YouTube:** [https://www.youtube.com/@X86BinaryGhost](https://www.youtube.com/@X86BinaryGhost)
+* **Instagram:** [https://www.instagram.com/01pandal10/](https://www.instagram.com/01pandal10/)
+* **GitHub:** [https://github.com/panda12332145](https://github.com/panda12332145)
+* **LinkedIn:** [linkedin.com/in/athos-da-boanergis](https://www.linkedin.com/in/athos-d%C3%A3-boanergis-5585a4288/)
+
+---
+
+## 🚀 Áreas de Interesse
+
+* **Cibersegurança Avançada** 🔒
+* **Hacking & Engenharia Reversa** 💻
+* **Computação de Baixo Nível** 🖥️
+* **Matemática e Física Teórica** 📐⚛️
+* **Desenvolvimento de Ferramentas de Segurança** 🛠️
+
+_"Conhecimento é poder, e domínio técnico vem da compreensão profunda dos sistemas."_
+
+---
+
+## 📞 Contato & Suporte
+
+Para colaborações, dúvidas ou sugestões:
+
+📧 **E-mail:** [athos.cybersec@gmail.com](mailto:athos.cybersec@gmail.com)
+
+🐛 **Reportar Bug:** [Abrir Issue](https://github.com/panda12332145/PhantomDLL-Injector/issues)
+
+💡 **Sugerir Melhoria:** [Discussions](https://github.com/panda12332145/PhantomDLL-Injector/discussions)
